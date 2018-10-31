@@ -1,9 +1,15 @@
-import requests as req
 import datetime
+import boto3
+import requests as req
 from rfeed import *
 from bs4 import BeautifulSoup
 
 url = 'https://pftmedia.com/category/pft-radio-network/major-scale/'
+s3_bucket_name = 'wgot-rss-scrape'
+s3_bucket_path = 'the-major-scale'
+
+s3 = boto3.resource('s3')
+bucket = s3.Bucket(s3_bucket_name)
 
 page = req.get(url).content
 soup = BeautifulSoup(page, 'html.parser')
@@ -64,4 +70,6 @@ feed = Feed(
         lastBuildDate=datetime.datetime.now(),
         items=feedItems)
 
-print feed.rss()
+rss_feed = feed.rss()
+object_url = s3_bucket_path + '/' + 'feed.rss'
+bucket.put_object(Key=object_url, Body=rss_feed, ContentType='application/rss+xml')
