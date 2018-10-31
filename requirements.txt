@@ -1,0 +1,4 @@
+rfeed==1.1.1
+boto3==1.9.34
+requests==2.20.0
+beautifulsoup4==4.6.3
