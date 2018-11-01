@@ -4,17 +4,7 @@ import requests as req
 from rfeed import *
 from bs4 import BeautifulSoup
 
-url = 'https://pftmedia.com/category/pft-radio-network/major-scale/'
-s3_bucket_name = 'wgot-rss-scrape'
-s3_bucket_path = 'the-major-scale'
-
-s3 = boto3.resource('s3')
-bucket = s3.Bucket(s3_bucket_name)
-
-page = req.get(url).content
-soup = BeautifulSoup(page, 'html.parser')
-
-class Post:
+class Podcast:
     def get_media_url(self):
         try:
             return unicode(self.content.find_all('a', download=True)[0]['href'])
@@ -31,14 +21,7 @@ class Post:
 
     def get_title(self):
         try:
-            return unicode(self.content.h2.a.contents[0])
-        except:
-            pass
-
-    def get_desc(self):
-        try:
-            return ''.join([unicode(elem) for elem in self.content \
-                .find_all(attrs={'class':'entry-content'})[0].contents])
+            return unicode(self.content.h2.contents[0])
         except:
             pass
 
@@ -47,21 +30,33 @@ class Post:
         self.url = self.get_media_url() # enclosure url, rename for clarity
         self.date = self.get_date()
         self.title = self.get_title()
-        self.desc = self.get_desc()
 
-posts = [Post(x) for x in soup.find_all('article', attrs={'class': 'post'})]
+url = 'http://pftmedia.com/?s=the+major+scale'
+s3_bucket_name = 'wgot-rss-scrape'
+s3_bucket_path = 'the-major-scale'
+
+s3 = boto3.resource('s3')
+bucket = s3.Bucket(s3_bucket_name)
+
+search_page = req.get(url).content
+soup = BeautifulSoup(search_page, 'html.parser')
+
+title_links = soup.find_all('a', attrs={'class':'entry-title-link'})
+podcasts_content = [req.get(title_link['href']).content for title_link in title_links]
+podcasts_parsed = [BeautifulSoup(podcast, 'html.parser') for podcast in podcasts_content]
+
+shows = [Podcast(x) for x in podcasts_parsed]
 
 # future: get etag from headers, save to file, compare when making request
 
 feedItems = [Item(
-            title=post.title,
-            description=post.desc,
+            title=show.title,
             enclosure=Enclosure(
-                url=post.url,
+                url=show.url,
                 type="audio/mpeg",
-                length=0),          # do we care about this property?
-            pubDate=post.date)
-        for post in posts]
+                length=0),
+            pubDate=show.date)
+        for show in shows]
 
 feed = Feed(
         title="The Major Scale",
