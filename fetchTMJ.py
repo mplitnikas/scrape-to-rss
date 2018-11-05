@@ -31,7 +31,8 @@ class Podcast:
         self.date = self.get_date()
         self.title = self.get_title()
 
-def scrape_and_output():
+def scrape_and_output(event, context):
+    # we don't use the args here (currently)
     url = 'http://pftmedia.com/?s=the+major+scale'
     s3_bucket_name = 'wgot-rss-scrape'
     s3_bucket_path = 'the-major-scale'
