@@ -72,4 +72,4 @@ def scrape_and_output(event, context):
     bucket.put_object(Key=object_url, Body=rss_feed, ContentType='application/rss+xml')
 
 if __name__ == "__main__":
-    scrape_and_output()
+    scrape_and_output("", "")
