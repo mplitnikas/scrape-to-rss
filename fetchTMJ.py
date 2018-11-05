@@ -31,40 +31,44 @@ class Podcast:
         self.date = self.get_date()
         self.title = self.get_title()
 
-url = 'http://pftmedia.com/?s=the+major+scale'
-s3_bucket_name = 'wgot-rss-scrape'
-s3_bucket_path = 'the-major-scale'
+def scrape_and_output():
+    url = 'http://pftmedia.com/?s=the+major+scale'
+    s3_bucket_name = 'wgot-rss-scrape'
+    s3_bucket_path = 'the-major-scale'
 
-s3 = boto3.resource('s3')
-bucket = s3.Bucket(s3_bucket_name)
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket(s3_bucket_name)
 
-search_page = req.get(url).content
-soup = BeautifulSoup(search_page, 'html.parser')
+    search_page = req.get(url).content
+    soup = BeautifulSoup(search_page, 'html.parser')
 
-title_links = soup.find_all('a', attrs={'class':'entry-title-link'})
-podcasts_content = [req.get(title_link['href']).content for title_link in title_links]
-podcasts_parsed = [BeautifulSoup(podcast, 'html.parser') for podcast in podcasts_content]
+    title_links = soup.find_all('a', attrs={'class':'entry-title-link'})
+    podcasts_content = [req.get(title_link['href']).content for title_link in title_links]
+    podcasts_parsed = [BeautifulSoup(podcast, 'html.parser') for podcast in podcasts_content]
 
-shows = [Podcast(x) for x in podcasts_parsed]
+    shows = [Podcast(x) for x in podcasts_parsed]
 
-# future: get etag from headers, save to file, compare when making request
+    # future: get etag from headers, save to file, compare when making request
 
-feedItems = [Item(
-            title=show.title,
-            enclosure=Enclosure(
-                url=show.url,
-                type="audio/mpeg",
-                length=0),
-            pubDate=show.date)
-        for show in shows]
+    feedItems = [Item(
+                title=show.title,
+                enclosure=Enclosure(
+                    url=show.url,
+                    type="audio/mpeg",
+                    length=0),
+                pubDate=show.date)
+            for show in shows]
 
-feed = Feed(
-        title="The Major Scale",
-        link="https://pftmedia.com/category/pft-radio-network/major-scale/",
-        description="The Major Scale by PFT Media",
-        lastBuildDate=datetime.datetime.now(),
-        items=feedItems)
+    feed = Feed(
+            title="The Major Scale",
+            link="https://pftmedia.com/category/pft-radio-network/major-scale/",
+            description="The Major Scale by PFT Media",
+            lastBuildDate=datetime.datetime.now(),
+            items=feedItems)
 
-rss_feed = feed.rss()
-object_url = s3_bucket_path + '/' + 'feed.rss'
-bucket.put_object(Key=object_url, Body=rss_feed, ContentType='application/rss+xml')
+    rss_feed = feed.rss()
+    object_url = s3_bucket_path + '/' + 'feed.rss'
+    bucket.put_object(Key=object_url, Body=rss_feed, ContentType='application/rss+xml')
+
+if __name__ == "__main__":
+    scrape_and_output()
